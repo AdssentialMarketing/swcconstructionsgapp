@@ -1,0 +1,29 @@
+# systemd unit — install at /etc/systemd/system/leakquote.service
+#
+#   sudo systemctl daemon-reload
+#   sudo systemctl enable --now leakquote
+#   sudo journalctl -u leakquote -f        # follow the logs
+
+[Unit]
+Description=SWC Leak Quote App
+After=network.target postgresql.service
+Wants=postgresql.service
+
+[Service]
+Type=simple
+User=leakquote
+WorkingDirectory=/srv/leakquote/server
+EnvironmentFile=/srv/leakquote/.env
+ExecStart=/usr/bin/node dist/index.js
+Restart=always
+RestartSec=5
+
+# The app writes uploads/, exports/ and signatures/ under WorkingDirectory,
+# so it needs write access there and nowhere else.
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=full
+ReadWritePaths=/srv/leakquote/server/uploads /srv/leakquote/server/exports /srv/leakquote/server/signatures
+
+[Install]
+WantedBy=multi-user.target

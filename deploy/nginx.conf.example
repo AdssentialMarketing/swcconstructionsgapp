@@ -1,0 +1,38 @@
+# nginx site — /etc/nginx/sites-available/leakquote
+#
+# Get the certificate with:
+#   sudo certbot --nginx -d quotes.swcconstruction.com.sg
+
+server {
+    listen 80;
+    server_name quotes.swcconstruction.com.sg;
+    return 301 https://$host$request_uri;
+}
+
+server {
+    listen 443 ssl http2;
+    server_name quotes.swcconstruction.com.sg;
+
+    ssl_certificate     /etc/letsencrypt/live/quotes.swcconstruction.com.sg/fullchain.pem;
+    ssl_certificate_key /etc/letsencrypt/live/quotes.swcconstruction.com.sg/privkey.pem;
+
+    # Site photographs are up to 10MB each and up to ten upload at once.
+    # The default 1MB would reject a normal inspection.
+    client_max_body_size 120M;
+
+    # Analysing a job's photos calls the Anthropic API and can take a while
+    # on a large upload. The default 60s cuts it off mid-request.
+    proxy_read_timeout 180s;
+    proxy_send_timeout 180s;
+
+    location / {
+        proxy_pass http://127.0.0.1:4000;
+        proxy_http_version 1.1;
+        proxy_set_header Host              $host;
+        proxy_set_header X-Real-IP         $remote_addr;
+        # The app sets `trust proxy` in production and reads these, both for
+        # secure cookies and to rate-limit per real client address.
+        proxy_set_header X-Forwarded-For   $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+    }
+}
